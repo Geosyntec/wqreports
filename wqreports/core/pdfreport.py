@@ -19,39 +19,49 @@ import wqio
 sns.set(style='ticks', context='paper')
 
 class PdfReport(object):
+    """ Class to generate generic 1-page reports from wqio objects.
+
+    Parameters
+    ----------
+    path : str
+        Filepath to the CSV file containing input data.
+    analytecol : str (default = 'analyte')
+        Column in the input file that contains the analyte name.
+    rescol : str (default='res')
+        Column in the input file that contains the result values.
+    qualcol : str (default='qual')
+        Column in the input file that contains the data qualifiers
+        labeling data as right-censored (non-detect) or not.
+    ndvals : list of strings
+        List of values found in ``qualcol`` that flag data as being
+        right-censored (non-detect). Any value in ``qualcol`` that is
+        *not* in this list will be assumed to denote an uncensored
+        (detected value).
+
+    Examples
+    --------
+    >>> import wqreports
+    >>> report = wqreports.PdfReport("~/data/arsenic.csv", ndvals=['U', 'UJ', '<'])
+    >>> report.make_report(...)
+
     """
-    A wrapper class for wqio and pybmp for use the NSQD data.
-    """
+
     def __init__(self, path, analytecol='analyte', rescol='res',
                  qualcol='qual', ndvals=['U']):
-        """
-        Requires:
-            path: str, filepath to the inpuit data
-            analytecol: str (default='analyte'), column in the input file that
-                contains the constituent name.
-            rescol: str (default='res'), column in the input file that
-                contains the result values.
-            qualcol: str (default='qual'), column in the input file that
-                contains the data qualifiers.
-        """
         self.filepath = path
         self.ndvals = ndvals
+        self.final_ndval = 'ND'
 
-        self._rawanalytecol = analytecol
-        self._rawrescol = rescol
-        self._rawqualcol = qualcol
-
-        self.analytecol = 'analyte'
-        self.rescol = 'res'
-        self.qualcol = 'qual'
+        self.analytecol = analytecol
+        self.rescol = rescol
+        self.qualcol = qualcol
 
         self._rawdata = None
         self._cleandata = None
 
     @property
     def rawdata(self):
-        """
-        Raw data as parsed by pandas.read_csv(self.filepath)
+        """ Raw data as parsed by pandas.read_csv(self.filepath)
         """
         if self._rawdata is None:
             self._rawdata = pd.read_csv(self.filepath)
@@ -59,43 +69,58 @@ class PdfReport(object):
 
     @property
     def cleandata(self):
-        """
-        Cleaned data with the original columns renamed to
-        'analyte', 'result', 'qual'.
+        """ Cleaned data with simpler qualifiers.
         """
         if self._cleandata is None:
-            self._cleandata = (self.rawdata
-                .rename(columns={
-                    self._rawanalytecol: self.analytecol,
-                    self._rawrescol: self.rescol,
-                    self._rawqualcol: self.qualcol,
-                })
-                .set_index(self.analytecol, append=True)
-                .replace({self.qualcol:{_:'ND' for _ in self.ndvals}})
+            self._cleandata = (
+                self.rawdata
+                    .replace({self.qualcol:{_: self.final_ndval for _ in self.ndvals}})
             )
         return self._cleandata
 
-    def make_report(self, analyte, savename, bsIter=10000, station_type='inflow',
-                    useROS=True, include=True, pos=1, yscale='log', notch=True,
-                    showmean=True, width=0.8, bacteria=False,
-                    axtype='prob', patch_artist=False):
-        """
-        Produces a statistical report for the specified analyte.
+    def make_report(self, analyte, savename, bsIter=10000,
+                    station_type='inflow', useROS=True,
+                    statplot_options={}):
+        """ Produces a statistical report for the specified analyte.
 
-        Requires:
-            analyte: str, th specified analyte
-            savename, str, name of the output pdf
-        Optional:
-            bsIter=10000,
-            station_type='inflow',
-            useROS=True,
-            include=True
+        Parameters
+        ----------
+        analyte : str
+            The analyte to be summarized.
+        savename : str
+            Filename/path of the output pdf
+        bsIter : int (default = 10000)
+            Number of iterations used to refined statistics via a bias-
+            corrected and accelerated (BCA) bootstrapping method.
+        station_type : str (default = 'inflow')
+            Position of the monitoring location relative to any BMP
+            that may be present. Valid values are "inflow" and
+            "outflow".
+        useROS : bool (default is True)
+            Toggles the use of regression-on-order statistics to
+            estimate censored (non-detect) values when computing summary
+            statistics
+        statplot_options : dict, optional
+            Dictionary of keyward arguments to be passed to
+            wqio.Location.statplot
+
+        Returns
+        -------
+        None
+
+        See also
+        --------
+        wqio.Location
+        wqio.Location.statplot
+
         """
         # get target analyte
         data = self.cleandata.xs(analyte, level=self.analytecol)
 
-        loc = wqio.features.Location(data, bsIter=bsIter,
-            station_type=station_type, useROS=useROS, include=include)
+        loc = wqio.features.Location(data, bsIter=bsIter, ndval=self.final_ndval,
+                                     rescol=self.rescol, qualcol=self.qualcol,
+                                     station_type=station_type, useROS=useROS,
+                                     include=True)
 
         # make table
         singlevarfmtr = '{0:.3f}'
@@ -124,9 +149,7 @@ class PdfReport(object):
         df = pd.DataFrame(rows, columns=['Statistic', 'Result'])
 
         # wqio figure - !can move args to main func later!
-        fig = loc.statplot(pos=pos, yscale=yscale, notch=notch, showmean=showmean,
-            width=width, bacteria=bacteria, ylabel=analyte, axtype=axtype,
-            patch_artist=patch_artist)
+        fig = loc.statplot(**statplot_options)
         fig.tight_layout()
 
         # force figure to a byte object in memory then encode
