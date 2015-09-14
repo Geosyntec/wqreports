@@ -19,21 +19,35 @@ import wqio
 sns.set(style='ticks', context='paper')
 
 class PdfReport(object):
+    """ Class to generate generic 1-page reports from wqio objects.
+
+    Parameters
+    ----------
+    path : str
+        Filepath to the CSV file containing input data.
+    analytecol : str (default = 'analyte')
+        Column in the input file that contains the analyte name.
+    rescol : str (default='res')
+        Column in the input file that contains the result values.
+    qualcol : str (default='qual')
+        Column in the input file that contains the data qualifiers
+        labeling data as right-censored (non-detect) or not.
+    ndvals : list of strings
+        List of values found in ``qualcol`` that flag data as being
+        right-censored (non-detect). Any value in ``qualcol`` that is
+        *not* in this list will be assumed to denote an uncensored
+        (detected value).
+
+    Examples
+    --------
+    >>> import wqreports
+    >>> report = wqreports.PdfReport("~/data/arsenic.csv", ndvals=['U', 'UJ', '<'])
+    >>> report.make_report(...)
+
     """
-    A wrapper class for wqio and pybmp for use the NSQD data.
-    """
+
     def __init__(self, path, analytecol='analyte', rescol='res',
                  qualcol='qual', ndvals=['U']):
-        """
-        Requires:
-            path: str, filepath to the inpuit data
-            analytecol: str (default='analyte'), column in the input file that
-                contains the constituent name.
-            rescol: str (default='res'), column in the input file that
-                contains the result values.
-            qualcol: str (default='qual'), column in the input file that
-                contains the data qualifiers.
-        """
         self.filepath = path
         self.ndvals = ndvals
 
@@ -79,17 +93,31 @@ class PdfReport(object):
                     useROS=True, include=True, pos=1, yscale='log', notch=True,
                     showmean=True, width=0.8, bacteria=False,
                     axtype='prob', patch_artist=False):
-        """
-        Produces a statistical report for the specified analyte.
+        """ Produces a statistical report for the specified analyte.
 
-        Requires:
-            analyte: str, th specified analyte
-            savename, str, name of the output pdf
-        Optional:
-            bsIter=10000,
-            station_type='inflow',
-            useROS=True,
-            include=True
+        Parameters
+        ----------
+        analyte : str
+            The analyte to be summarized.
+        savename : str
+            Filename/path of the output pdf
+        bsIter : int (default = 10000)
+            Number of iterations used to refined statistics via a bias-
+            corrected and accelerated (BCA) bootstrapping method.
+        station_type : str (default = 'inflow')
+            Position of the monitoring location relative to any BMP
+            that may be present. Valid values are "inflow" and
+            "outflow".
+        useROS : bool (default is True)
+            Toggles the use of regression-on-order statistics to
+            estimate censored (non-detect) values when computing summary
+            statistics
+
+        See also
+        --------
+        wqio.Location
+        wqio.Location.statplot
+
         """
         # get target analyte
         data = self.cleandata.xs(analyte, level=self.analytecol)
