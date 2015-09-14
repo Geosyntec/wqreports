@@ -56,7 +56,6 @@ class PdfReport(object):
         self.rescol = rescol
         self.qualcol = qualcol
 
-
         self._rawdata = None
         self._cleandata = None
 
@@ -75,7 +74,6 @@ class PdfReport(object):
         if self._cleandata is None:
             self._cleandata = (
                 self.rawdata
-                    .set_index(self.analytecol, append=True)
                     .replace({self.qualcol:{_: self.final_ndval for _ in self.ndvals}})
             )
         return self._cleandata
