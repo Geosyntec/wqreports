@@ -50,22 +50,19 @@ class PdfReport(object):
                  qualcol='qual', ndvals=['U']):
         self.filepath = path
         self.ndvals = ndvals
+        self.final_ndval = 'ND'
 
-        self._rawanalytecol = analytecol
-        self._rawrescol = rescol
-        self._rawqualcol = qualcol
+        self.analytecol = analytecol
+        self.rescol = rescol
+        self.qualcol = qualcol
 
-        self.analytecol = 'analyte'
-        self.rescol = 'res'
-        self.qualcol = 'qual'
 
         self._rawdata = None
         self._cleandata = None
 
     @property
     def rawdata(self):
-        """
-        Raw data as parsed by pandas.read_csv(self.filepath)
+        """ Raw data as parsed by pandas.read_csv(self.filepath)
         """
         if self._rawdata is None:
             self._rawdata = pd.read_csv(self.filepath)
@@ -73,26 +70,19 @@ class PdfReport(object):
 
     @property
     def cleandata(self):
-        """
-        Cleaned data with the original columns renamed to
-        'analyte', 'result', 'qual'.
+        """ Cleaned data with simpler qualifiers.
         """
         if self._cleandata is None:
-            self._cleandata = (self.rawdata
-                .rename(columns={
-                    self._rawanalytecol: self.analytecol,
-                    self._rawrescol: self.rescol,
-                    self._rawqualcol: self.qualcol,
-                })
-                .set_index(self.analytecol, append=True)
-                .replace({self.qualcol:{_:'ND' for _ in self.ndvals}})
+            self._cleandata = (
+                self.rawdata
+                    .set_index(self.analytecol, append=True)
+                    .replace({self.qualcol:{_: self.final_ndval for _ in self.ndvals}})
             )
         return self._cleandata
 
-    def make_report(self, analyte, savename, bsIter=10000, station_type='inflow',
-                    useROS=True, include=True, pos=1, yscale='log', notch=True,
-                    showmean=True, width=0.8, bacteria=False,
-                    axtype='prob', patch_artist=False):
+    def make_report(self, analyte, savename, bsIter=10000,
+                    station_type='inflow', useROS=True,
+                    statplot_options={}):
         """ Produces a statistical report for the specified analyte.
 
         Parameters
@@ -112,6 +102,13 @@ class PdfReport(object):
             Toggles the use of regression-on-order statistics to
             estimate censored (non-detect) values when computing summary
             statistics
+        statplot_options : dict, optional
+            Dictionary of keyward arguments to be passed to
+            wqio.Location.statplot
+
+        Returns
+        -------
+        None
 
         See also
         --------
@@ -122,8 +119,10 @@ class PdfReport(object):
         # get target analyte
         data = self.cleandata.xs(analyte, level=self.analytecol)
 
-        loc = wqio.features.Location(data, bsIter=bsIter,
-            station_type=station_type, useROS=useROS, include=include)
+        loc = wqio.features.Location(data, bsIter=bsIter, ndval=self.final_ndval,
+                                     rescol=self.rescol, qualcol=self.qualcol,
+                                     station_type=station_type, useROS=useROS,
+                                     include=True)
 
         # make table
         singlevarfmtr = '{0:.3f}'
@@ -152,9 +151,7 @@ class PdfReport(object):
         df = pd.DataFrame(rows, columns=['Statistic', 'Result'])
 
         # wqio figure - !can move args to main func later!
-        fig = loc.statplot(pos=pos, yscale=yscale, notch=notch, showmean=showmean,
-            width=width, bacteria=bacteria, ylabel=analyte, axtype=axtype,
-            patch_artist=patch_artist)
+        fig = loc.statplot(**statplot_options)
         fig.tight_layout()
 
         # force figure to a byte object in memory then encode
