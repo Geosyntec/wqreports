@@ -46,6 +46,59 @@ def make_table(loc):
     return  pd.DataFrame(rows, columns=['Statistic', 'Result'])
 
 
+def make_report(loc, savename, statplot_options={}):
+    """ Produces a statistical report for the specified analyte.
+
+    Parameters
+    ----------
+    loc : wqio.Location
+        The Location object to be summarized.
+    savename : str
+        Filename/path of the output pdf
+    statplot_options : dict, optional
+        Dictionary of keyward arguments to be passed to
+        wqio.Location.statplot
+
+    Returns
+    -------
+    None
+
+    See also
+    --------
+    wqio.Location
+    wqio.Location.statplot
+
+    """
+
+    # make the table
+    table = make_table(loc)
+    table_html = table.to_html(index=False, justify='left').replace('\\n', '\n')
+
+    # wqio figure - !can move args to main func later!
+    fig = loc.statplot(**statplot_options)
+    fig.tight_layout()
+
+    # force figure to a byte object in memory then encode
+    img = io.BytesIO()
+    fig.savefig(img, format="png", dpi=300)
+    img.seek(0)
+    uri = ('data:image/png;base64,'
+        + urllib.parse.quote(base64.b64encode(img.read())))
+
+    # html magic
+    env = Environment(loader=FileSystemLoader(r'.\utils'))
+    template = env.from_string(html_template.getvalue())
+
+    # create pdf report
+    template_vars = {'title' : analyte,
+                     'body': analyte,
+                     'analyte_table': table_html,
+                     'image': uri}
+
+    html_out = template.render(template_vars)
+    pdf = pdfkit.from_string(html_out, savename, css=css_template)
+
+
 class PdfReport(object):
     """ Class to generate generic 1-page reports from wqio objects.
 
@@ -162,57 +215,24 @@ class PdfReport(object):
 
         return loc
 
-    def make_report(self, analyte, savename, statplot_options={}):
-        """ Produces a statistical report for the specified analyte.
+    def export_pdfs(self, output_path, basename=None, **statplot_options):
+        """ Export 1-pg summary PDF for each analyte in the data.
 
         Parameters
         ----------
-        analyte : str
-            The analyte to be summarized.
-        savename : str
-            Filename/path of the output pdf
-        statplot_options : dict, optional
-            Dictionary of keyward arguments to be passed to
-            wqio.Location.statplot
-
-        Returns
-        -------
-        None
-
-        See also
-        --------
-        wqio.Location
-        wqio.Location.statplot
+        output_path : string
+            Folder path in which all PDFs will be saved
+        basename : string, optional
+            Prefix for the filename of each PDF. If omitted, the
+            filename will simply the be analyte.
+        statplot_options : optional keyword arguments
+            Options passed directly to wqio.Location.statplot
 
         """
 
-        # make the locations
-        loc = self.make_loc(analyte)
+        if basename is None:
+            basename = ""
 
-        # make the table
-        table = make_table(loc)
-        table_html = table.to_html(index=False, justify='left').replace('\\n', '\n')
-
-        # wqio figure - !can move args to main func later!
-        fig = loc.statplot(**statplot_options)
-        fig.tight_layout()
-
-        # force figure to a byte object in memory then encode
-        img = io.BytesIO()
-        fig.savefig(img, format="png", dpi=300)
-        img.seek(0)
-        uri = ('data:image/png;base64,'
-            + urllib.parse.quote(base64.b64encode(img.read())))
-
-        # html magic
-        env = Environment(loader=FileSystemLoader(r'.\utils'))
-        template = env.from_string(html_template.getvalue())
-
-        # create pdf report
-        template_vars = {'title' : analyte,
-                         'body': analyte,
-                         'analyte_table': table_html,
-                         'image': uri}
-
-        html_out = template.render(template_vars)
-        pdf = pdfkit.from_string(html_out, savename, css=css_template)
+        for analyte, loc in self.locations.items():
+            filename = os.path.join(output_path, '{}{}.pdf'.format(basename, analyte))
+            make_report(loc, filename, statplot_options=statplot_options)
