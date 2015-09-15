@@ -7,6 +7,8 @@ import numpy.testing as nptest
 import pandas
 import pandas.util.testing as pdtest
 
+from wqio import Location
+
 from wqreports import core
 
 @nt.nottest
@@ -89,6 +91,20 @@ class Base_PdfReport_Mixin(object):
         nt.assert_true(isinstance(self.report.cleandata, pandas.DataFrame))
         pdtest.assert_frame_equal(self.report.cleandata, self.known_cleandata)
 
+    def test_analytes(self):
+        nt.assert_true(hasattr(self.report, 'analytes'))
+        nt.assert_list_equal(self.report.analytes, self.known_analytes)
+
+    def test_locations(self):
+        nt.assert_true(hasattr(self.report, 'locations'))
+        nt.assert_true(isinstance(self.report.locations, dict))
+        for key, loc in self.report.locations.items():
+            nt.assert_true(isinstance(loc, Location))
+
+    def test__make_location(self):
+        loc = self.report._make_location("analyte_a")
+        pdtest.assert_frame_equal(loc._raw_data, self.known_cleandata.query("analyte == 'analyte_a'"))
+
 
 class test_PdfReport_defaults(Base_PdfReport_Mixin):
     def setup(self):
@@ -142,3 +158,5 @@ class test_PdfReport_defaults(Base_PdfReport_Mixin):
                      15: 0.1535038, 16: 0.6039080, 17: 0.7387704,
                      18: 0.2776045, 19: 0.3523322}
         })[['analyte', 'res', 'qual']]
+
+        self.known_analytes = ['analyte_a', 'analyte_b']

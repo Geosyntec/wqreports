@@ -65,6 +65,12 @@ class PdfReport(object):
         right-censored (non-detect). Any value in ``qualcol`` that is
         *not* in this list will be assumed to denote an uncensored
         (detected value).
+    bsIter : int (default = 10000)
+        Number of iterations used to refined statistics via a bias-
+        corrected and accelerated (BCA) bootstrapping method.
+    useROS : bool (default is True)
+        Toggles the use of regression-on-order statistics to estimate
+        censored (non-detect) values when computing summary statistics.
 
     Examples
     --------
@@ -75,10 +81,13 @@ class PdfReport(object):
     """
 
     def __init__(self, path, analytecol='analyte', rescol='res',
-                 qualcol='qual', ndvals=['U']):
+                 qualcol='qual', ndvals=['U'], bsIter=5000,
+                 useROS=True):
         self.filepath = path
         self.ndvals = ndvals
         self.final_ndval = 'ND'
+        self.bsIter = bsIter
+        self.useROS = True
 
         self.analytecol = analytecol
         self.rescol = rescol
@@ -86,6 +95,8 @@ class PdfReport(object):
 
         self._rawdata = None
         self._cleandata = None
+        self._analytes = None
+        self._locations = None
 
     @property
     def rawdata(self):
@@ -106,9 +117,52 @@ class PdfReport(object):
             )
         return self._cleandata
 
-    def make_report(self, analyte, savename, bsIter=10000,
-                    station_type='inflow', useROS=True,
-                    statplot_options={}):
+    @property
+    def analytes(self):
+        """ Simple list of the analytes to be analyzed.
+        """
+        if self._analytes is None:
+            self._analytes = self.cleandata[self.analytecol].unique().tolist()
+            self._analytes.sort(    )
+        return self._analytes
+
+    @property
+    def locations(self):
+        """ Simple list of wqio.Location objects for each analyte.
+        """
+        if self._locations is None:
+            self._locations = {a: self._make_location(a) for a in self.analytes}
+
+        return self._locations
+
+    def _make_location(self, analyte):
+        """ Make a wqio.Location from an analyte.
+
+        Parameters
+        ----------
+        analyte : string
+            The pollutant to be included in the Location.
+
+        Returns
+        -------
+        loc : wqio.Location
+            A wqio.Location object for the provided analyte.
+
+        """
+        if analyte not in self.analytes:
+            raise ValueError("{} is not in the dataset".format(analyte))
+
+        # get target analyte
+        querystring = "{} == @analyte".format(self.analytecol)
+        data = self.cleandata.query(querystring)
+
+        loc = wqio.features.Location(data, bsIter=self.bsIter, ndval=self.final_ndval,
+                                     rescol=self.rescol, qualcol=self.qualcol,
+                                     useROS=self.useROS, include=True)
+
+        return loc
+
+    def make_report(self, analyte, savename, statplot_options={}):
         """ Produces a statistical report for the specified analyte.
 
         Parameters
@@ -117,17 +171,6 @@ class PdfReport(object):
             The analyte to be summarized.
         savename : str
             Filename/path of the output pdf
-        bsIter : int (default = 10000)
-            Number of iterations used to refined statistics via a bias-
-            corrected and accelerated (BCA) bootstrapping method.
-        station_type : str (default = 'inflow')
-            Position of the monitoring location relative to any BMP
-            that may be present. Valid values are "inflow" and
-            "outflow".
-        useROS : bool (default is True)
-            Toggles the use of regression-on-order statistics to
-            estimate censored (non-detect) values when computing summary
-            statistics
         statplot_options : dict, optional
             Dictionary of keyward arguments to be passed to
             wqio.Location.statplot
@@ -142,13 +185,9 @@ class PdfReport(object):
         wqio.Location.statplot
 
         """
-        # get target analyte
-        data = self.cleandata.xs(analyte, level=self.analytecol)
 
-        loc = wqio.features.Location(data, bsIter=bsIter, ndval=self.final_ndval,
-                                     rescol=self.rescol, qualcol=self.qualcol,
-                                     station_type=station_type, useROS=useROS,
-                                     include=True)
+        # make the locations
+        loc = self.make_loc(analyte)
 
         # make the table
         table = make_table(loc)
