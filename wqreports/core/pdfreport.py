@@ -46,7 +46,7 @@ def make_table(loc):
     return  pd.DataFrame(rows, columns=['Statistic', 'Result'])
 
 
-def make_report(loc, savename, statplot_options={}):
+def make_report(loc, savename, analyte=None, statplot_options={}):
     """ Produces a statistical report for the specified analyte.
 
     Parameters
@@ -55,6 +55,8 @@ def make_report(loc, savename, statplot_options={}):
         The Location object to be summarized.
     savename : str
         Filename/path of the output pdf
+    analyte : str, optional
+        Optional name for the analyte in the ``loc``'s data.
     statplot_options : dict, optional
         Dictionary of keyward arguments to be passed to
         wqio.Location.statplot
@@ -69,6 +71,9 @@ def make_report(loc, savename, statplot_options={}):
     wqio.Location.statplot
 
     """
+
+    if analyte is None:
+        analyte = loc.definition.get("analyte", "unknown")
 
     # make the table
     table = make_table(loc)
@@ -176,7 +181,7 @@ class PdfReport(object):
         """
         if self._analytes is None:
             self._analytes = self.cleandata[self.analytecol].unique().tolist()
-            self._analytes.sort(    )
+            self._analytes.sort()
         return self._analytes
 
     @property
@@ -184,7 +189,11 @@ class PdfReport(object):
         """ Simple list of wqio.Location objects for each analyte.
         """
         if self._locations is None:
-            self._locations = {a: self._make_location(a) for a in self.analytes}
+            self._locations = {}
+            for a in self.analytes:
+                loc = self._make_location(a)
+                loc.definition = {"analyte": a}
+                self._locations[a] = loc
 
         return self._locations
 
@@ -235,4 +244,4 @@ class PdfReport(object):
 
         for analyte, loc in self.locations.items():
             filename = os.path.join(output_path, '{}{}.pdf'.format(basename, analyte))
-            make_report(loc, filename, statplot_options=statplot_options)
+            make_report(loc, filename, analyte=analyte, statplot_options=statplot_options)

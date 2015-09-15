@@ -1,4 +1,5 @@
 import os
+import sys
 from pkg_resources import resource_filename
 
 import nose.tools as nt
@@ -104,6 +105,14 @@ class Base_PdfReport_Mixin(object):
     def test__make_location(self):
         loc = self.report._make_location("analyte_a")
         pdtest.assert_frame_equal(loc._raw_data, self.known_cleandata.query("analyte == 'analyte_a'"))
+
+    @nt.raises(ValueError)
+    def test__make_location_bad_analyte(self):
+        loc = self.report._make_location("JUNK")
+
+    @nptest.dec.skipif(True)
+    def test_export_pdfs_smoke_test(self):
+        self.report.export_pdfs('.', 'test')
 
 
 class test_PdfReport_defaults(Base_PdfReport_Mixin):
