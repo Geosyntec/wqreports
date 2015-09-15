@@ -5,15 +5,6 @@
 import os
 from setuptools import setup, find_packages
 
-
-def getDataFiles(submodule, folder):
-    datadir = os.path.join('wqreports', submodule, folder)
-    files = [d for d in map(
-        lambda x: os.path.join(datadir, x),
-        os.listdir(datadir)
-    )]
-    return files
-
 DESCRIPTION = "wqreports: Create reports from data analyzed with wqio"
 LONG_DESCRIPTION = DESCRIPTION
 NAME = "wqreports"
@@ -23,7 +14,7 @@ AUTHOR_EMAIL = "lnguyen@geosyntec.com"
 URL = "https://github.com/Geosyntec/wqreports"
 DOWNLOAD_URL = URL
 LICENSE = "BSD 3-clause"
-PACKAGES = find_packages(exclude=['cvc', 'lib'])
+PACKAGES = find_packages(exclude=[])
 PLATFORMS = "Python 3.3 and later."
 CLASSIFIERS = [
     "License :: OSI Approved :: BSD License",
@@ -36,14 +27,11 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
 ]
-INSTALL_REQUIRES = ['seaborn', 'wqio']
+INSTALL_REQUIRES = ['jinja2', 'seaborn', 'wqio']
 PACKAGE_DATA = {
-    #'wqreports': ['wqreports/bmp/data/*', 'wqreports/bmp/tex/*'],
-    #'wqreports/testing': ["wqreports/testing/data/testdata.accdb"]
+    'wqreports.testing': ['*.txt'],
 }
-DATA_FILES = [
-    ('wqreports/testing', getDataFiles('testing', 'data')),
-]
+DATA_FILES = None
 
 if __name__ == "__main__":
     setup(
@@ -62,4 +50,5 @@ if __name__ == "__main__":
         platforms=PLATFORMS,
         classifiers=CLASSIFIERS,
         install_requires=INSTALL_REQUIRES,
+        zip_safe=False
     )

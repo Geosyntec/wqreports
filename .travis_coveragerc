@@ -1,0 +1,26 @@
+# .coveragerc to control coverage.py
+[run]
+source = wqreports
+branch = True
+include = wqreports/*.py
+omit =
+    wqreports/tests/*
+    wqreports/testutils/*
+
+[report]
+include = wqreports/*.py
+ignore_errors = True
+omit =
+    wqreports/tests/*
+    wqreports/testutils/*
+
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # Don't complain if tests don't hit defensive assertion code:
+    raise NotImplementedError
+    except NotImplementedError
+    # Ignore pass
+    pass
