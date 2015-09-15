@@ -1,4 +1,5 @@
 import os
+import sys
 from pkg_resources import resource_filename
 
 import nose.tools as nt
@@ -7,7 +8,53 @@ import numpy.testing as nptest
 import pandas
 import pandas.util.testing as pdtest
 
-import wqreports
+from wqio import Location
+
+from wqreports import core
+
+@nt.nottest
+class mock_location(object):
+    def __init__(self):
+        self.N = 21
+        self.ND = 3
+        self.min = 0.012
+        self.max = 4.75
+        self.mean = 0.56
+        self.mean_conf_interval = (0.37, 0.92)
+        self.std = 0.33
+        self.logmean = 0.45
+        self.logmean_conf_interval = (0.35, 0.85)
+        self.logstd = 0.22
+        self.geomean = 0.63
+        self.geomean_conf_interval = (0.43, 0.72)
+        self.cov = 0.35
+        self.skew = 0.34
+        self.median = 0.51
+        self.median_conf_interval = (0.45, 0.62)
+        self.pctl25 = 0.17
+        self.pctl75 = 2.13
+
+
+def test_make_table():
+    dataframe = core.make_table(mock_location())
+    cols = ['Result', 'Statistic']
+    known_dataframe = pandas.DataFrame({
+        'Result': {
+            0: '21.000', 1: '3.000', 2: '0.012; 4.750', 3: '0.560\n(0.370; 0.920)',
+            4: '0.330', 5: '0.450\n(0.350; 0.850)', 6: '0.220',
+            7: '0.630\n(0.430; 0.720)', 8: '0.350', 9: '0.340',
+            10: '0.510\n(0.450; 0.620)', 11: '0.170; 2.130'
+        },
+        'Statistic': {
+            0: 'Count', 1: 'Number of NDs', 2: 'Min; Max',
+            3: 'Mean\n(95% confidence interval)', 4: 'Standard Deviation',
+            5: 'Log. Mean\n(95% confidence interval)', 6: 'Log. Standard Deviation',
+            7: 'Geo. Mean\n(95% confidence interval)', 8: 'Coeff. of Variation',
+            9: 'Skewness', 10: 'Median\n(95% confidence interval)', 11: 'Quartiles'
+        }
+    })
+    pdtest.assert_frame_equal(dataframe[cols], known_dataframe[cols])
+
 
 
 class Base_PdfReport_Mixin(object):
@@ -45,6 +92,28 @@ class Base_PdfReport_Mixin(object):
         nt.assert_true(isinstance(self.report.cleandata, pandas.DataFrame))
         pdtest.assert_frame_equal(self.report.cleandata, self.known_cleandata)
 
+    def test_analytes(self):
+        nt.assert_true(hasattr(self.report, 'analytes'))
+        nt.assert_list_equal(self.report.analytes, self.known_analytes)
+
+    def test_locations(self):
+        nt.assert_true(hasattr(self.report, 'locations'))
+        nt.assert_true(isinstance(self.report.locations, dict))
+        for key, loc in self.report.locations.items():
+            nt.assert_true(isinstance(loc, Location))
+
+    def test__make_location(self):
+        loc = self.report._make_location("analyte_a")
+        pdtest.assert_frame_equal(loc._raw_data, self.known_cleandata.query("analyte == 'analyte_a'"))
+
+    @nt.raises(ValueError)
+    def test__make_location_bad_analyte(self):
+        loc = self.report._make_location("JUNK")
+
+    @nptest.dec.skipif(True)
+    def test_export_pdfs_smoke_test(self):
+        self.report.export_pdfs('.', 'test')
+
 
 class test_PdfReport_defaults(Base_PdfReport_Mixin):
     def setup(self):
@@ -55,7 +124,7 @@ class test_PdfReport_defaults(Base_PdfReport_Mixin):
         self.known_analytecol = 'analyte'
         self.known_qualcol = 'qual'
         self.known_rescol = 'res'
-        self.report = wqreports.PdfReport(self.path)
+        self.report = core.PdfReport(self.path)
 
         self.known_rawdata = pandas.DataFrame({
             'analyte': {0: 'analyte_b', 1: 'analyte_a', 2: 'analyte_a',
@@ -98,3 +167,5 @@ class test_PdfReport_defaults(Base_PdfReport_Mixin):
                      15: 0.1535038, 16: 0.6039080, 17: 0.7387704,
                      18: 0.2776045, 19: 0.3523322}
         })[['analyte', 'res', 'qual']]
+
+        self.known_analytes = ['analyte_a', 'analyte_b']
