@@ -11,7 +11,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from . import pdfkit
+# pip install https://github.com/Geosyntec/python-pdfkit/archive/master.zip
+import pdfkit
 from ..utils import (html_template, css_template)
 import wqio
 
