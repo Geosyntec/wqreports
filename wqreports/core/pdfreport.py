@@ -15,8 +15,36 @@ from . import pdfkit
 from ..utils import (html_template, css_template)
 import wqio
 
-
 sns.set(style='ticks', context='paper')
+
+
+def make_table(loc):
+    # make table
+    singlevarfmtr = '{0:.3f}'
+    doublevarfmtr = '{0:.3f}; {1:.3f}'
+    multilinefmtr = '{0:.3f}\n({1:.3f}; {2:.3f})'
+
+    rows = [
+        ['Count', singlevarfmtr.format(loc.N)],
+        ['Number of NDs', singlevarfmtr.format(loc.ND)],
+        ['Min; Max', doublevarfmtr.format(loc.min,loc.max)],
+        ['Mean\n(95% confidence interval)', multilinefmtr.format(
+                loc.mean, *loc.mean_conf_interval)],
+        ['Standard Deviation', singlevarfmtr.format(loc.std)],
+        ['Log. Mean\n(95% confidence interval)', multilinefmtr.format(
+                loc.logmean, *loc.logmean_conf_interval)],
+        ['Log. Standard Deviation', singlevarfmtr.format(loc.logstd)],
+        ['Geo. Mean\n(95% confidence interval)', multilinefmtr.format(
+                loc.geomean, *loc.geomean_conf_interval)],
+        ['Coeff. of Variation', singlevarfmtr.format(loc.cov)],
+        ['Skewness', singlevarfmtr.format(loc.skew)],
+        ['Median\n(95% confidence interval)', multilinefmtr.format(
+                loc.median, *loc.median_conf_interval)],
+        ['Quartiles', doublevarfmtr.format(loc.pctl25, loc.pctl75)],
+    ]
+
+    return  pd.DataFrame(rows, columns=['Statistic', 'Result'])
+
 
 class PdfReport(object):
     """ Class to generate generic 1-page reports from wqio objects.
@@ -122,31 +150,9 @@ class PdfReport(object):
                                      station_type=station_type, useROS=useROS,
                                      include=True)
 
-        # make table
-        singlevarfmtr = '{0:.3f}'
-        doublevarfmtr = '{0:.3f}; {1:.3f}'
-        multilinefmtr = '{0:.3f}\n({1:.3f}; {2:.3f})'
-
-        rows = [
-            ['Count', singlevarfmtr.format(loc.N)],
-            ['Number of NDs', singlevarfmtr.format(loc.ND)],
-            ['Min; Max', doublevarfmtr.format(loc.min,loc.max)],
-            ['Mean\n(95% confidence interval)', multilinefmtr.format(
-                    loc.mean, *loc.mean_conf_interval)],
-            ['Standard Deviation', singlevarfmtr.format(loc.std)],
-            ['Log. Mean\n(95% confidence interval)', multilinefmtr.format(
-                    loc.logmean, *loc.logmean_conf_interval)],
-            ['Log. Standard Deviation', singlevarfmtr.format(loc.logstd)],
-            ['Geo. Mean\n(95% confidence interval)', multilinefmtr.format(
-                    loc.geomean, *loc.geomean_conf_interval)],
-            ['Coeff. of Variation', singlevarfmtr.format(loc.cov)],
-            ['Skewness', singlevarfmtr.format(loc.skew)],
-            ['Median\n(95% confidence interval)', multilinefmtr.format(
-                    loc.median, *loc.median_conf_interval)],
-            ['Quartiles', doublevarfmtr.format(loc.pctl25, loc.pctl75)],
-        ]
-
-        df = pd.DataFrame(rows, columns=['Statistic', 'Result'])
+        # make the table
+        table = make_table(loc)
+        table_html = table.to_html(index=False, justify='left').replace('\\n', '\n')
 
         # wqio figure - !can move args to main func later!
         fig = loc.statplot(**statplot_options)
@@ -166,8 +172,7 @@ class PdfReport(object):
         # create pdf report
         template_vars = {'title' : analyte,
                          'body': analyte,
-                         'analyte_table': df.to_html(
-                            index=False, justify='left').replace('\\n', '\n'),
+                         'analyte_table': table_html,
                          'image': uri}
 
         html_out = template.render(template_vars)
