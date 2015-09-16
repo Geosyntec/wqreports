@@ -4,6 +4,8 @@ import io
 from jinja2 import Environment, FileSystemLoader, FunctionLoader
 import urllib
 import base64
+import copy
+import gc
 
 import numpy as np
 import pandas as pd
@@ -102,7 +104,9 @@ def make_report(loc, savename, analyte=None, statplot_options={}):
                      'image': uri}
 
     html_out = template.render(template_vars)
-    pdf = pdfkit.from_string(html_out, savename, css=css_template)
+    csst = copy.copy(css_template)
+    pdf = pdfkit.from_string(html_out, savename, css=csst)
+    gc.collect()
 
 
 class PdfReport(object):
