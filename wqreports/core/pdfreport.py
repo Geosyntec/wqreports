@@ -30,26 +30,32 @@ def make_table(loc):
     rows = [
         ['Count', singlevarfmtr.format(loc.N)],
         ['Number of NDs', singlevarfmtr.format(loc.ND)],
-        ['Min; Max', doublevarfmtr.format(loc.min,loc.max)],
-        ['Mean\n(95% confidence interval)', multilinefmtr.format(
+        ['Min; Max ({})'.format(loc.definition['unit']),
+            doublevarfmtr.format(loc.min,loc.max)],
+        ['Mean ({})\n(95% confidence interval)'.format(loc.definition['unit']),
+            multilinefmtr.format(
                 loc.mean, *loc.mean_conf_interval)],
-        ['Standard Deviation', singlevarfmtr.format(loc.std)],
+        ['Standard Deviation ({})'.format(loc.definition['unit']),
+            singlevarfmtr.format(loc.std)],
         ['Log. Mean\n(95% confidence interval)', multilinefmtr.format(
                 loc.logmean, *loc.logmean_conf_interval)],
         ['Log. Standard Deviation', singlevarfmtr.format(loc.logstd)],
-        ['Geo. Mean\n(95% confidence interval)', multilinefmtr.format(
+        ['Geo. Mean ({})\n(95% confidence interval)'.format(loc.definition['unit']),
+            multilinefmtr.format(
                 loc.geomean, *loc.geomean_conf_interval)],
         ['Coeff. of Variation', singlevarfmtr.format(loc.cov)],
         ['Skewness', singlevarfmtr.format(loc.skew)],
-        ['Median\n(95% confidence interval)', multilinefmtr.format(
+        ['Median ({})\n(95% confidence interval)'.format(loc.definition['unit']),
+            multilinefmtr.format(
                 loc.median, *loc.median_conf_interval)],
-        ['Quartiles', doublevarfmtr.format(loc.pctl25, loc.pctl75)],
+        ['Quartiles ({})'.format(loc.definition['unit']),
+            doublevarfmtr.format(loc.pctl25, loc.pctl75)],
     ]
 
     return  pd.DataFrame(rows, columns=['Statistic', 'Result'])
 
 
-def make_report(loc, savename, analyte=None, statplot_options={}):
+def make_report(loc, savename, analyte=None, geolocation=None, statplot_options={}):
     """ Produces a statistical report for the specified analyte.
 
     Parameters
@@ -77,6 +83,14 @@ def make_report(loc, savename, analyte=None, statplot_options={}):
 
     if analyte is None:
         analyte = loc.definition.get("analyte", "unknown")
+    if geolocation is None:
+        geolocation = loc.definition.get("geolocation", "unknown")
+
+    unit = loc.definition['unit']
+    thershold = loc.definition['thershold']
+
+    if 'ylabel' not in statplot_options:
+        statplot_options['ylabel'] = analyte + ' ' + '(' + unit + ')'
 
     # make the table
     table = make_table(loc)
@@ -84,6 +98,26 @@ def make_report(loc, savename, analyte=None, statplot_options={}):
 
     # wqio figure - !can move args to main func later!
     fig = loc.statplot(**statplot_options)
+
+    ax1, ax2 = fig.get_axes()
+    ax1xlim = ax1.get_xlim()
+    ax2xlim = ax2.get_xlim()
+    ax1ylim = ax1.get_ylim()
+    ax2ylim = ax2.get_ylim()
+
+    ax2.plot(ax2xlim, [thershold]*2, color=sns.color_palette()[-1], label='Threshold')
+    handles, labels = ax2.get_legend_handles_labels()
+    labels[0] = 'Data (extrapolated and non)'
+    ax2.legend(handles, labels, loc='best')
+    ax2.set_xlabel('Percent less than value')
+    ax1.set_xlabel('')
+
+    ax1.set_xlim(ax1xlim)
+    ax2.set_xlim(ax2xlim)
+    ax1.set_ylim(ax1ylim)
+    ax2.set_ylim(ax2ylim)
+
+
     fig.tight_layout()
 
     # force figure to a byte object in memory then encode
@@ -98,8 +132,8 @@ def make_report(loc, savename, analyte=None, statplot_options={}):
     template = env.from_string(html_template.getvalue())
 
     # create pdf report
-    template_vars = {'title' : analyte,
-                     'body': analyte,
+    template_vars = {'analyte' : analyte,
+                     'location': geolocation,
                      'analyte_table': table_html,
                      'image': uri}
 
@@ -144,8 +178,10 @@ class PdfReport(object):
     """
 
     def __init__(self, path, analytecol='analyte', rescol='res',
-                 qualcol='qual', ndvals=['U'], bsIter=5000,
+                 qualcol='qual', unitcol='unit', locationcol='location',
+                 thersholdcol='threshold', ndvals=['U'], bsIter=5000,
                  useROS=True):
+
         self.filepath = path
         self.ndvals = ndvals
         self.final_ndval = 'ND'
@@ -153,12 +189,17 @@ class PdfReport(object):
         self.useROS = True
 
         self.analytecol = analytecol
+        self.unitcol = unitcol
+        self.locationcol = locationcol
+        self.thersholdcol = thersholdcol
         self.rescol = rescol
         self.qualcol = qualcol
 
         self._rawdata = None
         self._cleandata = None
         self._analytes = None
+        self._geolocations = None
+        self._thresholds = None
         self._locations = None
 
     @property
@@ -190,19 +231,47 @@ class PdfReport(object):
         return self._analytes
 
     @property
+    def geolocations(self):
+        """Simple list of the physical locations in the dataset.
+        """
+        if self._geolocations is None:
+            self._geolocations = self.cleandata[self.locationcol].unique().tolist()
+            self._geolocations.sort()
+        return self._geolocations
+
+    @property
+    def thresholds(self):
+        """Simple dictionary of thresholds per each analyte.
+        """
+        if self._thresholds is None:
+            thresholds = (self.cleandata.loc[:,[self.analytecol, self.thersholdcol]]
+                              .drop_duplicates())
+            tshape = thresholds.shape[0]
+            thresholds = thresholds.set_index(self.analytecol).loc[:,self.thersholdcol]
+            thresholds = thresholds.to_dict()
+            if tshape != len(thresholds):
+                e = ('An analyte has mroe than one thershold value, please'
+                    ' check the input data')
+                raise ValueError(e)
+            self._thresholds = thresholds
+        return self._thresholds
+
+
+    @property
     def locations(self):
         """ Simple list of wqio.Location objects for each analyte.
         """
         if self._locations is None:
             self._locations = {}
-            for a in self.analytes:
-                loc = self._make_location(a)
-                loc.definition = {"analyte": a}
-                self._locations[a] = loc
+            gb = self.cleandata.groupby([self.locationcol, self.analytecol])
+            for gl, a in gb.groups.keys():
+                loc = self._make_location(gl, a)
+                loc.definition.update({"analyte": a, "geolocation": gl})
+                self._locations[(gl, a)] = loc
 
         return self._locations
 
-    def _make_location(self, analyte):
+    def _make_location(self, location, analyte):
         """ Make a wqio.Location from an analyte.
 
         Parameters
@@ -218,14 +287,24 @@ class PdfReport(object):
         """
         if analyte not in self.analytes:
             raise ValueError("{} is not in the dataset".format(analyte))
+        if location not in self.geolocations:
+            raise ValueError("{} is not in the dataset".format(location))
 
         # get target analyte
-        querystring = "{} == @analyte".format(self.analytecol)
+        querystring = "{} == @location and {} == @analyte".format(self.locationcol, self.analytecol)
         data = self.cleandata.query(querystring)
+
+        if data[self.unitcol].unique().shape[0] > 1:
+            e = 'More than one unit detected for {}-{}. Please check the input file'
+            raise ValueError(e)
 
         loc = wqio.features.Location(data, bsIter=self.bsIter, ndval=self.final_ndval,
                                      rescol=self.rescol, qualcol=self.qualcol,
                                      useROS=self.useROS, include=True)
+        loc.definition = {
+            'unit': data[self.unitcol].iloc[0],
+            'thershold': self.thresholds[analyte]
+        }
 
         return loc
 
@@ -247,6 +326,7 @@ class PdfReport(object):
         if basename is None:
             basename = ""
 
-        for analyte, loc in self.locations.items():
-            filename = os.path.join(output_path, '{}{}.pdf'.format(basename, analyte))
-            make_report(loc, filename, analyte=analyte, statplot_options=statplot_options)
+        for (geolocation, analyte), loc in self.locations.items():
+            filename = os.path.join(output_path, '{}{}{}.pdf'.format(basename, geolocation, analyte))
+            make_report(loc, filename, analyte=analyte, geolocation=geolocation,
+             statplot_options=statplot_options)
