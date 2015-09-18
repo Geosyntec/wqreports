@@ -5,10 +5,10 @@ html_template = StringIO(
 <html>
 <head lang="en">
     <meta charset="UTF-8">
-    <title>{{ title }}</title>
+    <title>Summary of {{ analyte }} data at location {{ location }}</title>
 </head>
 <body>
-    <h2>{{ body }}</h2>
+    <h2>Summary of {{ analyte }} data at location {{ location }}</h2>
      {{ analyte_table }}<br>
      <img src="{{ image }}"  height="500">
 </body>
@@ -25,9 +25,9 @@ css_template = StringIO(
 
 /* Default font settings.
    The font-size percentage is of 16px. (0.75 * 16px = 12px) */
-html { font-size:100.01%; }
+html { font-size:110%; }
 body {
-  font-size: 75%;
+  font-size: 120%;
   color: #222;
   background: #fff;
   font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
