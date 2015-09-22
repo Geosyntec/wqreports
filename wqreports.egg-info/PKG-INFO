@@ -1,0 +1,20 @@
+Metadata-Version: 1.1
+Name: wqreports
+Version: 0.1
+Summary: wqreports: Create reports from data analyzed with wqio
+Home-page: https://github.com/Geosyntec/wqreports
+Author: Lucas Nguyen (Geosyntec Consultants)
+Author-email: lnguyen@geosyntec.com
+License: BSD 3-clause
+Download-URL: https://github.com/Geosyntec/wqreports
+Description: wqreports: Create reports from data analyzed with wqio
+Platform: Python 3.3 and later.
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Formats and Protocols :: Data Formats
+Classifier: Topic :: Scientific/Engineering :: Earth Sciences
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Programming Language :: Python :: 3.3
+Classifier: Programming Language :: Python :: 3.4

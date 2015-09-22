@@ -1,0 +1,16 @@
+wqreports/__init__.py
+wqreports.egg-info/PKG-INFO
+wqreports.egg-info/SOURCES.txt
+wqreports.egg-info/dependency_links.txt
+wqreports.egg-info/not-zip-safe
+wqreports.egg-info/requires.txt
+wqreports.egg-info/top_level.txt
+wqreports/core/__init__.py
+wqreports/core/pdfreport.py
+wqreports/testing/__init__.py
+wqreports/testing/testdata.txt
+wqreports/tests/__init__.py
+wqreports/tests/core_tests/__init__.py
+wqreports/tests/core_tests/test_pdfreports.py
+wqreports/utils/__init__.py
+wqreports/utils/templates.py
