@@ -1,3 +1,4 @@
+
 # Compiled source #
 ###################
 *.com
@@ -8,6 +9,9 @@
 *.so
 *.pyc
 __pycache__
+build
+dist
+*.egg-info
 
 # Packages #
 ############
