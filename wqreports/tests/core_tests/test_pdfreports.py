@@ -111,7 +111,7 @@ class Base_PdfReport_Mixin(object):
 
     @nt.raises(ValueError)
     def test__make_location_bad_analyte(self):
-        loc = self.report._make_location("JUNK")
+        loc = self.report._make_location("JUNK", "JUNK")
 
     @nptest.dec.skipif(True)
     def test_export_pdfs_smoke_test(self):
