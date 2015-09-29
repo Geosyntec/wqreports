@@ -116,6 +116,7 @@ class Base_PdfReport_Mixin(object):
 
     @nt.raises(ValueError)
     def test__make_location_bad_analyte(self):
+        # todo: rename
         loc = self.report._make_location("JUNK", "JUNK")
 
     @nptest.dec.skipif(True)
