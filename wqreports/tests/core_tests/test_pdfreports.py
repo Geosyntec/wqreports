@@ -34,6 +34,11 @@ class mock_location(object):
         self.pctl25 = 0.17
         self.pctl75 = 2.13
 
+        self.definition = {
+            'unit': 'mg/L',
+            'thershold': 0.8
+        }
+
 
 def test_make_table():
     dataframe = core.make_table(mock_location())
@@ -46,11 +51,11 @@ def test_make_table():
             10: '0.510\n(0.450; 0.620)', 11: '0.170; 2.130'
         },
         'Statistic': {
-            0: 'Count', 1: 'Number of NDs', 2: 'Min; Max',
-            3: 'Mean\n(95% confidence interval)', 4: 'Standard Deviation',
+            0: 'Count', 1: 'Number of NDs', 2: 'Min; Max (mg/L)',
+            3: 'Mean (mg/L)\n(95% confidence interval)', 4: 'Standard Deviation (mg/L)',
             5: 'Log. Mean\n(95% confidence interval)', 6: 'Log. Standard Deviation',
-            7: 'Geo. Mean\n(95% confidence interval)', 8: 'Coeff. of Variation',
-            9: 'Skewness', 10: 'Median\n(95% confidence interval)', 11: 'Quartiles'
+            7: 'Geo. Mean (mg/L)\n(95% confidence interval)', 8: 'Coeff. of Variation',
+            9: 'Skewness', 10: 'Median (mg/L)\n(95% confidence interval)', 11: 'Quartiles (mg/L)'
         }
     })
     pdtest.assert_frame_equal(dataframe[cols], known_dataframe[cols])
