@@ -34,6 +34,11 @@ class mock_location(object):
         self.pctl25 = 0.17
         self.pctl75 = 2.13
 
+        self.definition = {
+            'unit': 'mg/L',
+            'thershold': 0.8
+        }
+
 
 def test_make_table():
     dataframe = core.make_table(mock_location())
@@ -46,11 +51,11 @@ def test_make_table():
             10: '0.510\n(0.450; 0.620)', 11: '0.170; 2.130'
         },
         'Statistic': {
-            0: 'Count', 1: 'Number of NDs', 2: 'Min; Max',
-            3: 'Mean\n(95% confidence interval)', 4: 'Standard Deviation',
+            0: 'Count', 1: 'Number of NDs', 2: 'Min; Max (mg/L)',
+            3: 'Mean (mg/L)\n(95% confidence interval)', 4: 'Standard Deviation (mg/L)',
             5: 'Log. Mean\n(95% confidence interval)', 6: 'Log. Standard Deviation',
-            7: 'Geo. Mean\n(95% confidence interval)', 8: 'Coeff. of Variation',
-            9: 'Skewness', 10: 'Median\n(95% confidence interval)', 11: 'Quartiles'
+            7: 'Geo. Mean (mg/L)\n(95% confidence interval)', 8: 'Coeff. of Variation',
+            9: 'Skewness', 10: 'Median (mg/L)\n(95% confidence interval)', 11: 'Quartiles (mg/L)'
         }
     })
     pdtest.assert_frame_equal(dataframe[cols], known_dataframe[cols])
@@ -103,12 +108,16 @@ class Base_PdfReport_Mixin(object):
             nt.assert_true(isinstance(loc, Location))
 
     def test__make_location(self):
-        loc = self.report._make_location("analyte_a")
-        pdtest.assert_frame_equal(loc._raw_data, self.known_cleandata.query("analyte == 'analyte_a'"))
+        loc = self.report._make_location("location1", "analyte_a")
+        pdtest.assert_frame_equal(
+            loc._raw_data,
+            self.known_cleandata.query(
+                "analyte == 'analyte_a' and location == 'location1'"))
 
     @nt.raises(ValueError)
     def test__make_location_bad_analyte(self):
-        loc = self.report._make_location("JUNK")
+        # todo: rename
+        loc = self.report._make_location("JUNK", "JUNK")
 
     @nptest.dec.skipif(True)
     def test_export_pdfs_smoke_test(self):
@@ -144,8 +153,30 @@ class test_PdfReport_defaults(Base_PdfReport_Mixin):
                      9: 0.70941756, 10: 0.7486036, 11: 0.5187555,
                      12: 0.0476615, 13: 0.6662081, 14: 0.0276759,
                      15: 0.1535038, 16: 0.6039080, 17: 0.7387704,
-                     18: 0.2776045, 19: 0.3523322}
-        })[['analyte', 'res', 'qual']]
+                     18: 0.2776045, 19: 0.3523322},
+            'location': {0: 'location1', 1: 'location1', 2: 'location1',
+                         3: 'location1', 4: 'location1', 5: 'location1',
+                         6: 'location1', 7: 'location1', 8: 'location1',
+                         9: 'location1', 10: 'location1', 11: 'location1',
+                         12: 'location1', 13: 'location1', 14: 'location1',
+                         15: 'location1', 16: 'location1', 17: 'location1',
+                         18: 'location1', 19: 'location1'},
+            'unit': {0: 'mg/L', 1: 'mg/L', 2: 'mg/L',
+                     3: 'mg/L', 4: 'mg/L', 5: 'mg/L',
+                     6: 'mg/L', 7: 'mg/L', 8: 'mg/L',
+                     9: 'mg/L', 10: 'mg/L', 11: 'mg/L',
+                     12: 'mg/L', 13: 'mg/L', 14: 'mg/L',
+                     15: 'mg/L', 16: 'mg/L', 17: 'mg/L',
+                     18: 'mg/L', 19: 'mg/L'},
+            'threshold': {0: 0.8, 1: 0.8, 2: 0.8,
+                          3: 0.8, 4: 0.8, 5: 0.8,
+                          6: 0.8, 7: 0.8, 8: 0.8,
+                          9: 0.8, 10: 0.8, 11: 0.8,
+                          12: 0.8, 13: 0.8, 14: 0.8,
+                          15: 0.8, 16: 0.8, 17: 0.8,
+                          18: 0.8, 19: 0.8},
+
+        })[['location', 'analyte', 'res', 'qual', 'unit','threshold']]
 
         self.known_cleandata = pandas.DataFrame({
             'analyte': {0: 'analyte_b', 1: 'analyte_a', 2: 'analyte_a',
@@ -165,7 +196,29 @@ class test_PdfReport_defaults(Base_PdfReport_Mixin):
                      9: 0.70941756, 10: 0.7486036, 11: 0.5187555,
                      12: 0.0476615, 13: 0.6662081, 14: 0.0276759,
                      15: 0.1535038, 16: 0.6039080, 17: 0.7387704,
-                     18: 0.2776045, 19: 0.3523322}
-        })[['analyte', 'res', 'qual']]
+                     18: 0.2776045, 19: 0.3523322},
+            'location': {0: 'location1', 1: 'location1', 2: 'location1',
+                         3: 'location1', 4: 'location1', 5: 'location1',
+                         6: 'location1', 7: 'location1', 8: 'location1',
+                         9: 'location1', 10: 'location1', 11: 'location1',
+                         12: 'location1', 13: 'location1', 14: 'location1',
+                         15: 'location1', 16: 'location1', 17: 'location1',
+                         18: 'location1', 19: 'location1'},
+            'unit': {0: 'mg/L', 1: 'mg/L', 2: 'mg/L',
+                     3: 'mg/L', 4: 'mg/L', 5: 'mg/L',
+                     6: 'mg/L', 7: 'mg/L', 8: 'mg/L',
+                     9: 'mg/L', 10: 'mg/L', 11: 'mg/L',
+                     12: 'mg/L', 13: 'mg/L', 14: 'mg/L',
+                     15: 'mg/L', 16: 'mg/L', 17: 'mg/L',
+                     18: 'mg/L', 19: 'mg/L'},
+            'threshold': {0: 0.8, 1: 0.8, 2: 0.8,
+                          3: 0.8, 4: 0.8, 5: 0.8,
+                          6: 0.8, 7: 0.8, 8: 0.8,
+                          9: 0.8, 10: 0.8, 11: 0.8,
+                          12: 0.8, 13: 0.8, 14: 0.8,
+                          15: 0.8, 16: 0.8, 17: 0.8,
+                          18: 0.8, 19: 0.8},
+        })[['location', 'analyte', 'res', 'qual', 'unit','threshold']]
 
         self.known_analytes = ['analyte_a', 'analyte_b']
+        self.known_locations = ['location1']
