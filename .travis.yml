@@ -28,6 +28,7 @@ install:
   - source activate test
   - conda config --add channels phobson
   - conda install --yes jinja2 seaborn wqio nose mock
+  - conda install --yes --channel=phobson pdfkit
   - conda install --yes coverage docopt requests pyyaml
   - pip install coveralls
   - pip install .
