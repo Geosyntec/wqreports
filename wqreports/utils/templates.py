@@ -8,10 +8,20 @@ html_template = StringIO(
     <title>Summary of {{ analyte }} data at location {{ location }}</title>
 </head>
 <body>
-    <h2>Summary of {{ analyte }} data at location {{ location }}</h2>
-     {{ analyte_table }}<br>
-     <img src="{{ image }}"  height="500">
-</body>
+  <h2>Summary of {{ analyte }} data at location {{ location }}</h2>
+    <div class="col-wrapper">
+
+      <div class="col col-1">
+          <h4>Results Table:</h4><br><br>
+          {{ analyte_table }}
+      </div>
+      <div class="col col-2">
+          <h4>Boxplot Guide:</h4>
+          <img src="{{ legend }}"  height="700" align="right">
+      </div><br>
+    <h4>Graphical Results:</h4>
+    <img src="{{ boxplot }}"  height="500" align="middle">
+</div></body>
 </html>"""
 )
 
@@ -47,8 +57,9 @@ h5 { font-size: 1em; font-weight: bold; margin-bottom: 1.5em; }
 h6 { font-size: 1em; font-weight: bold; }
 
 h1 img, h2 img, h3 img,
-h4 img, h5 img, h6 img {
-  margin: 0;
+h4 img, h5 img, h6 img,
+body img, img {
+  margin: 0; display: inline-block; vertical-align: center
 }
 
 
@@ -106,10 +117,11 @@ dd          { margin-left: 1.5em;}
     on table cells has to be 27px, instead of the standard 18px or 36px
     of other elements.
  */
-table       { margin-bottom: 1.4em; width:100%; border-collapse: collapse;}
+table       { margin-bottom: 1.4em; width: auto; border-collapse: collapse;
+              display: inline-block}
 th          { font-weight: bold; }
 thead th    { background: #c3d9ff; }
-th,td,caption { padding: 4px 10px 4px 5px; white-space:pre }
+th,td,caption { padding: 4px 5px 4px 5px; white-space:pre; vertical-align: center}
 /*
     You can zebra-stripe your tables in outdated browsers by adding
     the class "even" to every other table row.
@@ -139,5 +151,10 @@ caption     { background: #eee; }
 .last       { margin-right:0; padding-right:0; }
 .top        { margin-top:0; padding-top:0; }
 .bottom     { margin-bottom:0; padding-bottom:0; }
+
+.col-wrapper   {width:auto; margin:0 auto;}
+.col   {margin:0 10px; float:left; display:inline;}
+.col-670   {width:auto;}
+.col-250   {width:auto;}
 """
 )
