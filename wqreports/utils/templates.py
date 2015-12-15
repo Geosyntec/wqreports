@@ -5,10 +5,10 @@ html_template = StringIO(
 <html>
 <head lang="en">
     <meta charset="UTF-8">
-    <title>Summary of {{ analyte }} data at location {{ location }}</title>
+    <title>Summary of {{ analyte }} Data at Monitoring Location {{ location }}</title>
 </head>
 <body>
-  <h2>Summary of {{ analyte }} data at location {{ location }}</h2>
+  <h2>Summary of {{ analyte }} Data at Monitoring Location {{ location }}</h2>
     <div class="col-wrapper">
 
       <div class="col col-1">
@@ -18,10 +18,25 @@ html_template = StringIO(
       <div class="col col-2">
           <h4>Boxplot Guide:</h4>
           <img src="{{ legend }}"  height="700" align="right">
-      </div><br>
-    <h4>Graphical Results:</h4>
-    <img src="{{ boxplot }}"  height="500" align="middle">
-</div></body>
+      </div>
+    </div>
+  <div class="col-wrapper">
+    <div class="col col-1">
+      <h4>
+        Box Plot:
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        &nbsp;&nbsp;&nbsp;
+        Cumulative Distribution:
+      </h4>
+    </div>
+  </div>
+  <img src="{{ boxplot }}"  height="500" align="middle">
+<h6>For more details on the statistical analysis conducted for this report, see Guidebook Section 2.X, and Guidebook Appendix X.</h6>
+</body>
 </html>"""
 )
 
@@ -54,7 +69,7 @@ h2 { font-size: 2em; margin-bottom: 0.75em; }
 h3 { font-size: 1.5em; line-height: 1; margin-bottom: 1em; }
 h4 { font-size: 1.2em; line-height: 1.25; margin-bottom: 1.25em; }
 h5 { font-size: 1em; font-weight: bold; margin-bottom: 1.5em; }
-h6 { font-size: 1em; font-weight: bold; }
+h6 { font-size: .75em; font-weight: bold; }
 
 h1 img, h2 img, h3 img,
 h4 img, h5 img, h6 img,

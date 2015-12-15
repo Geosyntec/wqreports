@@ -97,7 +97,7 @@ def make_report(loc, savename, analyte=None, geolocation=None, statplot_options=
         if 'ylabel' not in statplot_options:
             statplot_options['ylabel'] = analyte + ' ' + '(' + unit + ')'
         if 'xlabel' not in statplot_options:
-            statplot_options['xlabel'] = geolocation
+            statplot_options['xlabel'] = 'Monitoring Location' #used to be geolocation
 
         # make the table
         table = make_table(loc)
@@ -111,7 +111,7 @@ def make_report(loc, savename, analyte=None, geolocation=None, statplot_options=
         ax2xlim = ax2.get_xlim()
 
         if loc.dataframe[loc.dataframe[loc.cencol]].shape[0] > 0:
-            print(loc.dataframe.head())
+            # print(loc.dataframe.head())
             qntls, ranked = stats.probplot(loc.data, fit=False)
             xvalues = stats.norm.cdf(qntls) * 100
             figdata = loc.dataframe.sort(columns='modeled')
