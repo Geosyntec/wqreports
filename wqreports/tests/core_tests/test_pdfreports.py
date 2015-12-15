@@ -110,7 +110,7 @@ class Base_PdfReport_Mixin(object):
     def test__make_location(self):
         loc = self.report._make_location("location1", "analyte_a")
         pdtest.assert_frame_equal(
-            loc._rawdata,
+            loc.raw_data,
             self.known_cleandata.query(
                 "analyte == 'analyte_a' and location == 'location1'"))
 
