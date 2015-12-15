@@ -20,6 +20,10 @@ from ..utils import (html_template, css_template)
 import wqio
 
 sns.set(style='ticks', context='paper')
+mpl.rcParams['text.usetex'] = False
+mpl.rcParams['lines.markeredgewidth'] = .5
+mpl.rcParams['font.family'] = ['sans-serif']
+mpl.rcParams['mathtext.default'] = 'regular'
 
 
 def make_table(loc):
@@ -93,7 +97,7 @@ def make_report(loc, savename, analyte=None, geolocation=None, statplot_options=
         if 'ylabel' not in statplot_options:
             statplot_options['ylabel'] = analyte + ' ' + '(' + unit + ')'
         if 'xlabel' not in statplot_options:
-            statplot_options['xlabel'] = geolocation
+            statplot_options['xlabel'] = 'Monitoring Location' #used to be geolocation
 
         # make the table
         table = make_table(loc)
@@ -106,13 +110,14 @@ def make_report(loc, savename, analyte=None, geolocation=None, statplot_options=
         ax1xlim = ax1.get_xlim()
         ax2xlim = ax2.get_xlim()
 
-        if loc.full_data.query('qual == "ND"').shape[0] > 0:
-            qntls, ranked = stats.probplot(loc.full_data.res, fit=False)
+        if loc.dataframe[loc.dataframe[loc.cencol]].shape[0] > 0:
+            # print(loc.dataframe.head())
+            qntls, ranked = stats.probplot(loc.data, fit=False)
             xvalues = stats.norm.cdf(qntls) * 100
-            figdata = loc.full_data.sort(columns='res')
+            figdata = loc.dataframe.sort(columns='modeled')
             figdata['xvalues'] =  xvalues
-            figdata = figdata.query('qual == "ND"')
-            ax2.plot(figdata.xvalues, figdata.res, linestyle='', marker='s',
+            figdata = figdata[~figdata[loc.cencol]]
+            ax2.plot(figdata.xvalues, figdata['modeled'], linestyle='', marker='s',
                      color='tomato', label='Extrapolated values')
 
 
@@ -129,15 +134,27 @@ def make_report(loc, savename, analyte=None, geolocation=None, statplot_options=
         ax2ylim = ax2.get_ylim()
         ax1.set_ylim(ax2ylim)
 
-
         fig.tight_layout()
 
         # force figure to a byte object in memory then encode
-        img = io.BytesIO()
-        fig.savefig(img, format="png", dpi=300)
-        img.seek(0)
-        uri = ('data:image/png;base64,'
-            + urllib.parse.quote(base64.b64encode(img.read())))
+        boxplot_img = io.BytesIO()
+        fig.savefig(boxplot_img, format="png", dpi=300)
+        boxplot_img.seek(0)
+        boxplot_uri = ('data:image/png;base64,'
+            + urllib.parse.quote(base64.b64encode(boxplot_img.read())))
+
+        mpl.rcParams['text.usetex'] = True
+        figl, axl = plt.subplots(1,1, figsize=(7,10))
+
+        wqio.utils.figutils.boxplot_legend(axl, notch=True, showmean=True, fontsize=13)
+
+        legend_img = io.BytesIO()
+        figl.savefig(legend_img, format="png", dpi=300, bbox_inches='tight')
+        legend_img.seek(0)
+        legend_uri = ('data:image/png;base64,'
+            + urllib.parse.quote(base64.b64encode(legend_img.read())))
+
+        mpl.rcParams['text.usetex'] = False
 
         # html magic
         env = Environment(loader=FileSystemLoader(r'.\utils'))
@@ -147,7 +164,8 @@ def make_report(loc, savename, analyte=None, geolocation=None, statplot_options=
         template_vars = {'analyte' : analyte,
                          'location': geolocation,
                          'analyte_table': table_html,
-                         'image': uri}
+                         'legend': legend_uri,
+                         'boxplot': boxplot_uri}
 
         html_out = template.render(template_vars)
         csst = copy.copy(css_template)
@@ -159,7 +177,8 @@ def make_report(loc, savename, analyte=None, geolocation=None, statplot_options=
                           'Please check that the destination pdf is not open.\n'
                           'Trace back:\n{}'.format(e))
         plt.close(fig)
-        del img
+        del boxplot_img
+        del figl
     else:
         print('{} does not have greater than 3 data points, skipping...'.format(savename))
 
@@ -351,8 +370,8 @@ class PdfReport(object):
             basename = ""
 
         for (geolocation, analyte), loc in self.locations.items():
-            san_geolocation = wqio.utils.misc.processFilename(geolocation)
-            san_analyte = wqio.utils.misc.processFilename(analyte)
+            san_geolocation = wqio.utils.processFilename(geolocation)
+            san_analyte = wqio.utils.processFilename(analyte)
             filename = os.path.join(output_path, '{}{}{}.pdf'.format(
                 basename, san_geolocation, san_analyte))
 
