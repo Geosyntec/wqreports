@@ -12,6 +12,7 @@ import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
+import scipy.stats as stats
 
 # pip install https://github.com/Geosyntec/python-pdfkit/archive/master.zip
 import pdfkit
@@ -80,66 +81,89 @@ def make_report(loc, savename, analyte=None, geolocation=None, statplot_options=
     wqio.Location.statplot
 
     """
+    if loc.full_data.shape[0] >= 3:
+        if analyte is None:
+            analyte = loc.definition.get("analyte", "unknown")
+        if geolocation is None:
+            geolocation = loc.definition.get("geolocation", "unknown")
 
-    if analyte is None:
-        analyte = loc.definition.get("analyte", "unknown")
-    if geolocation is None:
-        geolocation = loc.definition.get("geolocation", "unknown")
+        unit = loc.definition['unit']
+        thershold = loc.definition['thershold']
 
-    unit = loc.definition['unit']
-    thershold = loc.definition['thershold']
+        if 'ylabel' not in statplot_options:
+            statplot_options['ylabel'] = analyte + ' ' + '(' + unit + ')'
+        if 'xlabel' not in statplot_options:
+            statplot_options['xlabel'] = geolocation
 
-    if 'ylabel' not in statplot_options:
-        statplot_options['ylabel'] = analyte + ' ' + '(' + unit + ')'
+        # make the table
+        table = make_table(loc)
+        table_html = table.to_html(index=False, justify='left').replace('\\n', '\n')
 
-    # make the table
-    table = make_table(loc)
-    table_html = table.to_html(index=False, justify='left').replace('\\n', '\n')
+        # wqio figure - !can move args to main func later!
+        fig = loc.statplot(**statplot_options)
 
-    # wqio figure - !can move args to main func later!
-    fig = loc.statplot(**statplot_options)
+        ax1, ax2 = fig.get_axes()
+        ax1xlim = ax1.get_xlim()
+        ax2xlim = ax2.get_xlim()
 
-    ax1, ax2 = fig.get_axes()
-    ax1xlim = ax1.get_xlim()
-    ax2xlim = ax2.get_xlim()
-    ax1ylim = ax1.get_ylim()
-    ax2ylim = ax2.get_ylim()
-
-    ax2.plot(ax2xlim, [thershold]*2, color=sns.color_palette()[-1], label='Threshold')
-    handles, labels = ax2.get_legend_handles_labels()
-    labels[0] = 'Data (extrapolated and non)'
-    ax2.legend(handles, labels, loc='best')
-    ax2.set_xlabel('Percent less than value')
-    ax1.set_xlabel('')
-
-    ax1.set_xlim(ax1xlim)
-    ax2.set_xlim(ax2xlim)
-    ax1.set_ylim(ax1ylim)
-    ax2.set_ylim(ax2ylim)
+        if loc.full_data.query('qual == "ND"').shape[0] > 0:
+            qntls, ranked = stats.probplot(loc.full_data.res, fit=False)
+            xvalues = stats.norm.cdf(qntls) * 100
+            figdata = loc.full_data.sort(columns='res')
+            figdata['xvalues'] =  xvalues
+            figdata = figdata.query('qual == "ND"')
+            ax2.plot(figdata.xvalues, figdata.res, linestyle='', marker='s',
+                     color='tomato', label='Extrapolated values')
 
 
-    fig.tight_layout()
+        ax2.plot(ax2xlim, [thershold]*2, color=sns.color_palette()[-1], label='Threshold')
 
-    # force figure to a byte object in memory then encode
-    img = io.BytesIO()
-    fig.savefig(img, format="png", dpi=300)
-    img.seek(0)
-    uri = ('data:image/png;base64,'
-        + urllib.parse.quote(base64.b64encode(img.read())))
+        handles, labels = ax2.get_legend_handles_labels()
+        labels[0] = 'Data'
+        ax2.legend(handles, labels, loc='best')
+        ax2.set_xlabel('Percent less than value')
 
-    # html magic
-    env = Environment(loader=FileSystemLoader(r'.\utils'))
-    template = env.from_string(html_template.getvalue())
+        ax1.set_xlim(ax1xlim)
+        ax2.set_xlim(ax2xlim)
 
-    # create pdf report
-    template_vars = {'analyte' : analyte,
-                     'location': geolocation,
-                     'analyte_table': table_html,
-                     'image': uri}
+        ax2ylim = ax2.get_ylim()
+        ax1.set_ylim(ax2ylim)
 
-    html_out = template.render(template_vars)
-    csst = copy.copy(css_template)
-    pdf = pdfkit.from_string(html_out, savename, css=csst)
+
+        fig.tight_layout()
+
+        # force figure to a byte object in memory then encode
+        img = io.BytesIO()
+        fig.savefig(img, format="png", dpi=300)
+        img.seek(0)
+        uri = ('data:image/png;base64,'
+            + urllib.parse.quote(base64.b64encode(img.read())))
+
+        # html magic
+        env = Environment(loader=FileSystemLoader(r'.\utils'))
+        template = env.from_string(html_template.getvalue())
+
+        # create pdf report
+        template_vars = {'analyte' : analyte,
+                         'location': geolocation,
+                         'analyte_table': table_html,
+                         'image': uri}
+
+        html_out = template.render(template_vars)
+        csst = copy.copy(css_template)
+        try:
+            print('Creating report {}'.format(savename))
+            pdf = pdfkit.from_string(html_out, savename, css=csst)
+        except OSError as e:
+            raise OSError('The tool cannot write to the destination path. '
+                          'Please check that the destination pdf is not open.\n'
+                          'Trace back:\n{}'.format(e))
+        plt.close(fig)
+        del img
+    else:
+        print('{} does not have greater than 3 data points, skipping...'.format(savename))
+
+    print('\n')
     gc.collect()
 
 
@@ -327,6 +351,14 @@ class PdfReport(object):
             basename = ""
 
         for (geolocation, analyte), loc in self.locations.items():
-            filename = os.path.join(output_path, '{}{}{}.pdf'.format(basename, geolocation, analyte))
+            san_geolocation = wqio.utils.misc.processFilename(geolocation)
+            san_analyte = wqio.utils.misc.processFilename(analyte)
+            filename = os.path.join(output_path, '{}{}{}.pdf'.format(
+                basename, san_geolocation, san_analyte))
+
+            # need to make a copy so that the dict does not get changed in
+            # the low functions
+            spo = copy.copy(statplot_options)
+
             make_report(loc, filename, analyte=analyte, geolocation=geolocation,
-             statplot_options=statplot_options)
+             statplot_options=spo)
