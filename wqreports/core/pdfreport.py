@@ -116,7 +116,7 @@ def make_report(loc, savename, analyte=None, geolocation=None, statplot_options=
             xvalues = stats.norm.cdf(qntls) * 100
             figdata = loc.dataframe.sort(columns='modeled')
             figdata['xvalues'] =  xvalues
-            figdata = figdata[~figdata[loc.cencol]]
+            figdata = figdata[figdata[loc.cencol]]
             ax2.plot(figdata.xvalues, figdata['modeled'], linestyle='', marker='s',
                      color='tomato', label='Extrapolated values')
 
