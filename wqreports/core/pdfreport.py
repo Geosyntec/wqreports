@@ -143,7 +143,6 @@ def make_report(loc, savename, analyte=None, geolocation=None, statplot_options=
         boxplot_uri = ('data:image/png;base64,'
             + urllib.parse.quote(base64.b64encode(boxplot_img.read())))
 
-        mpl.rcParams['text.usetex'] = True
         figl, axl = plt.subplots(1,1, figsize=(7,10))
 
         wqio.utils.figutils.boxplot_legend(axl, notch=True, showmean=True, fontsize=13)
@@ -153,8 +152,6 @@ def make_report(loc, savename, analyte=None, geolocation=None, statplot_options=
         legend_img.seek(0)
         legend_uri = ('data:image/png;base64,'
             + urllib.parse.quote(base64.b64encode(legend_img.read())))
-
-        mpl.rcParams['text.usetex'] = False
 
         # html magic
         env = Environment(loader=FileSystemLoader(r'.\utils'))
