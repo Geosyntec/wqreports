@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 import seaborn as sns
 import scipy.stats as stats
 
@@ -143,9 +144,14 @@ def make_report(loc, savename, analyte=None, geolocation=None, statplot_options=
         boxplot_uri = ('data:image/png;base64,'
             + urllib.parse.quote(base64.b64encode(boxplot_img.read())))
 
+        # box plot legend
         figl, axl = plt.subplots(1,1, figsize=(7,10))
+        img = mpimg.imread('box.png')
 
-        wqio.utils.figutils.boxplot_legend(axl, notch=True, showmean=True, fontsize=13)
+        axl.imshow(img)
+        axl.xaxis.set_visible(False)
+        axl.yaxis.set_visible(False)
+        sns.despine(ax=axl, top=True, right=True, left=True, bottom=True)
 
         legend_img = io.BytesIO()
         figl.savefig(legend_img, format="png", dpi=300, bbox_inches='tight')
