@@ -8,16 +8,15 @@ html_template = StringIO(
     <title>Summary of {{ analyte }} Data at Monitoring Location {{ location }}</title>
 </head>
 <body>
-  <h2>Summary of {{ analyte }} Data at Monitoring Location {{ location }}</h2>
+  <h3>Summary of {{ analyte }} Data at Monitoring Location {{ location }}</h3>
     <div class="col-wrapper">
-
       <div class="col col-1">
-          <h4>Results Table:</h4><br><br>
+          <h4>Results Table:</h4><br>
           {{ analyte_table }}
       </div>
       <div class="col col-2">
           <h4>Boxplot Guide:</h4>
-          <img src="{{ legend }}"  height="700" align="right">
+          <img src="{{ legend }}"  height="600" align="right">
       </div>
     </div>
   <div class="col-wrapper">
@@ -35,7 +34,7 @@ html_template = StringIO(
     </div>
   </div>
   <img src="{{ boxplot }}"  height="500" align="middle">
-<h6>For more details on the statistical analysis conducted for this report, see Guidebook Section 2.X, and Guidebook Appendix X.</h6>
+<h6>For more details on the statistical analysis conducted for this report, see Guidebook Section 2.4, and Guidebook Appendix E.</h6>
 </body>
 </html>"""
 )
