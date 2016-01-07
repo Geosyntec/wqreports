@@ -35,8 +35,15 @@ while not filefound:
 
 
 basedir = os.path.split(src)[0]
-reports = wqreports.PdfReport(src)
+
+reports = wqreports.PdfReport(
+    src, analytecol='parameter', rescol='value',
+    qualcol='qualifier', unitcol='unit', locationcol='location',
+    thersholdcol='threshold')
+
 reports.export_pdfs(output_path=basedir)
 
 gc.collect()
 print('\n')
+
+src = input("All PDF Generated. Please close DOS window.")
