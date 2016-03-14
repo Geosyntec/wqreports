@@ -33,6 +33,28 @@ def make_table(loc):
     doublevarfmtr = '{0:.3f}; {1:.3f}'
     multilinefmtr = '{0:.3f}\n({1:.3f}; {2:.3f})'
 
+    if loc.logmean is None:
+        logmean = np.nan
+    else:
+        logmean = loc.logmean
+    if loc.geomean is None:
+        geomean = np.nan
+    else:
+        geomean = loc.geomean
+    if loc.logstd is None:
+        logstd = np.nan
+    else:
+        logstd = loc.logstd
+
+    if loc.logmean_conf_interval is None:
+        logmean_conf_interval = [np.nan, np.nan]
+    else:
+        logmean_conf_interval = loc.logmean_conf_interval
+    if loc.geomean_conf_interval is None:
+        geomean_conf_interval = [np.nan, np.nan]
+    else:
+        geomean_conf_interval = loc.geomean_conf_interval
+
     rows = [
         ['Count', singlevarfmtr.format(loc.N)],
         ['Number of NDs', singlevarfmtr.format(loc.ND)],
@@ -44,11 +66,11 @@ def make_table(loc):
         ['Standard Deviation ({})'.format(loc.definition['unit']),
             singlevarfmtr.format(loc.std)],
         ['Log. Mean\n(95% confidence interval)', multilinefmtr.format(
-                loc.logmean, *loc.logmean_conf_interval)],
-        ['Log. Standard Deviation', singlevarfmtr.format(loc.logstd)],
+                logmean, *logmean_conf_interval).replace('nan', '-')],
+        ['Log. Standard Deviation', singlevarfmtr.format(logstd).replace('nan', '-')],
         ['Geo. Mean ({})\n(95% confidence interval)'.format(loc.definition['unit']),
             multilinefmtr.format(
-                loc.geomean, *loc.geomean_conf_interval)],
+                geomean, *geomean_conf_interval).replace('nan', '-')],
         ['Coeff. of Variation', singlevarfmtr.format(loc.cov)],
         ['Skewness', singlevarfmtr.format(loc.skew)],
         ['Median ({})\n(95% confidence interval)'.format(loc.definition['unit']),
@@ -226,13 +248,13 @@ class PdfReport(object):
     def __init__(self, path, analytecol='analyte', rescol='res',
                  qualcol='qual', unitcol='unit', locationcol='location',
                  thersholdcol='threshold', ndvals=['U'], bsIter=5000,
-                 useROS=True):
+                 useROS=False):
 
         self.filepath = path
         self.ndvals = ndvals
         self.final_ndval = 'ND'
         self.bsIter = bsIter
-        self.useROS = True
+        self.useROS = useROS
 
         self.analytecol = analytecol
         self.unitcol = unitcol
@@ -253,7 +275,16 @@ class PdfReport(object):
         """ Raw data as parsed by pandas.read_csv(self.filepath)
         """
         if self._rawdata is None:
-            self._rawdata = pd.read_csv(self.filepath)
+            self._rawdata = pd.read_csv(
+                self.filepath,
+                dtype={
+                    self.analytecol: str,
+                    self.unitcol: str,
+                    self.locationcol: str,
+                    self.thersholdcol: np.float64,
+                    self.rescol: np.float64,
+                    self.qualcol: str,
+                })
         return self._rawdata
 
     @property
