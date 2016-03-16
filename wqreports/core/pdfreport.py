@@ -83,7 +83,7 @@ def make_table(loc):
     return  pd.DataFrame(rows, columns=['Statistic', 'Result'])
 
 
-def make_report(loc, savename, analyte=None, geolocation=None, statplot_options={}):
+def make_report(loc, savename, analyte=None, geolocation=None, statplot_options={}, useROS=False):
     """ Produces a statistical report for the specified analyte.
 
     Parameters
@@ -133,7 +133,7 @@ def make_report(loc, savename, analyte=None, geolocation=None, statplot_options=
         ax1xlim = ax1.get_xlim()
         ax2xlim = ax2.get_xlim()
 
-        if loc.dataframe[loc.dataframe[loc.cencol]].shape[0] > 0:
+        if loc.dataframe[loc.dataframe[loc.cencol]].shape[0] > 0 and useROS:
             # print(loc.dataframe.head())
             qntls, ranked = stats.probplot(loc.data, fit=False)
             xvalues = stats.norm.cdf(qntls) * 100
@@ -414,4 +414,4 @@ class PdfReport(object):
             spo = copy.copy(statplot_options)
 
             make_report(loc, filename, analyte=analyte, geolocation=geolocation,
-             statplot_options=spo)
+             statplot_options=spo, useROS=self.useROS)
