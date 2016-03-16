@@ -30,8 +30,9 @@ while not filefound:
     if os.path.exists(src):
         useROS = None
         useROSstr = input(
-            'Use ROS to estimate non-detect values?\n'
-            'All values must be positive (y/n)\n\t')
+            'Do you want to use ROS to estimate non-detect values?\n'
+            'All values must be greater than zero to use this feature.\n'
+            'Input (y/n):\n\t')
 
         print('\n')
 
